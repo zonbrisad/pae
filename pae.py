@@ -17,8 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from math import sin
-from xmlrpc.client import Boolean
-from escape import Esc
+from escape import Escape
 import time
 
 
@@ -29,6 +28,10 @@ class PaeType(Enum):
     Count = 3
     Average = 4
     Integrate = 5
+    Derivate = 6
+    Counter = 7
+    Limit = 8
+    RateLimit = 9
 
     Sine = 100
     Square = 101
@@ -38,16 +41,16 @@ class PaeType(Enum):
 @dataclass
 class PaeObject:
     tick: int = 0
-    enabled: Boolean = True
+    enabled: bool = True
     id: str = ""
     name: str = ""
     desc: str = ""
     unit: str = ""
 
-    def enable(self, en: Boolean) -> None:
+    def enable(self, en: bool) -> None:
         self.enabled = en
 
-    def is_enabled(self) -> Boolean:
+    def is_enabled(self) -> bool:
         return self.enabled
 
     def get_id(self) -> str:
@@ -78,18 +81,25 @@ class PaeObject:
 class PaeNode(PaeObject):
     def __init__(
         self,
-        id: str = "",
+        id: str = None,
         desc: str = "",
         type: PaeType = PaeType.Normal,
         source: PaeNode = None,
     ) -> None:
         super().__init__(id=id)
         self.value = 0.0
+        self.last = 0.0
         self.type = type
         self.source = source
         self.invalid = False
         self.no_data = False
         self.out_of_range = False
+
+    def get_id(self) -> str:
+        if self.source is not None:
+            return self.source.get_id()
+
+        return self.id
 
     def get_value(self) -> float:
         return self.value
@@ -116,6 +126,12 @@ class PaeNode(PaeObject):
             if sv > self.value:
                 self.value = sv
 
+        if self.type == PaeType.Counter:
+            if self.source.value > 0.5 and self.last < 0.5:
+                self.value += 1
+
+            self.last = self.source.value
+
         if self.type == PaeType.Average:
             pass
 
@@ -134,7 +150,7 @@ class PaeNode(PaeObject):
                 self.tick = -5
 
     def __str__(self) -> str:
-        return f"{self.id:8} {self.type.name:6} {self.value:8.3f}"
+        return f"{self.get_id():8} {self.type.name:10} {self.value:8.3f}"
 
 
 class PaeAlarm(PaeObject):
@@ -147,6 +163,7 @@ class PaeMotor(PaeObject):
         super().__init__()
         self.nodes = []
         self.alarms = []
+        self.first = False
 
     def add_node(self, node: PaeNode) -> None:
         self.nodes.append(node)
@@ -161,6 +178,23 @@ class PaeMotor(PaeObject):
         for alarm in self.alarms:
             alarm.update()
         pass
+
+    def printout(self) -> None:
+        print(self, end="")
+
+    def __str__(self) -> str:
+        out = ""
+        if self.first is not True:
+            for _ in self.nodes:
+                out += "\n"
+            self.first = True
+
+        for _ in self.nodes:
+            out += Escape.UP
+
+        for x in self.nodes:
+            out += f"{str(x)}\n"
+        return out
 
 
 class PaeFType:
@@ -179,6 +213,7 @@ def main() -> None:
     n_square = PaeNode(type=PaeType.Square, id="square")
     n_min = PaeNode(type=PaeType.Min, source=n_sin)
     n_max = PaeNode(type=PaeType.Max, source=n_sin)
+    n_count = PaeNode(type=PaeType.Counter, source=n_square)
 
     motor = PaeMotor()
 
@@ -186,19 +221,13 @@ def main() -> None:
     motor.add_node(n_square)
     motor.add_node(n_min)
     motor.add_node(n_max)
+    motor.add_node(n_count)
 
-    print()
-    print()
-    print()
-    print()
     for i in range(1, 100):
         motor.update()
-        for _ in range(0, 4):
-            print(f"{Esc.UP}", end="")
-        print(n_sin)
-        print(n_square)
-        print(n_min)
-        print(n_max)
+        motor.printout()
+        # p = motor.__printout()
+
         time.sleep(0.1)
 
 
