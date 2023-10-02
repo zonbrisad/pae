@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 #
-# a simple plot widget for qt5
+# Plotwidget for Pae
 #
-# File:     simpleplot
+# File:     paeplot
 # Author:   Peter Malmberg  <peter.malmberg@gmail.com>
 # Org:      __ORGANISTATION__
 # Date:     2023-09-30
@@ -43,7 +43,7 @@ class PaePlot(pg.PlotWidget):
         self.node = node
         self.filter = AvgFilter(average)
 
-        self.setTitle(node.id)
+        self.setTitle(node.get_name())
 
         self.x = list(range(self.datapoints))
         self.y = [0 for _ in range(self.datapoints)]

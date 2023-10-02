@@ -13,6 +13,7 @@
 #
 # ----------------------------------------------------------------------------
 
+from ast import Add
 import traceback
 import os
 import sys
@@ -48,9 +49,9 @@ from paeplot import PaePlot
 
 
 class App:
-    NAME = "xx"
+    NAME = "Paetest"
     VERSION = "0.01"
-    DESCRIPTION = "asdf asdf asdf"
+    DESCRIPTION = "Program for testing pae graphicly"
     LICENSE = ""
     AUTHOR = "Peter Malmberg"
     EMAIL = "<peter.malmberg@gmail.com>"
@@ -61,7 +62,7 @@ class App:
 
 # Qt main window settings
 win_title = App.NAME
-win_x_size = 680
+win_x_size = 800
 win_y_size = 240
 
 
@@ -135,6 +136,7 @@ class MainWindow(QMainWindow):
         # self.plotLayout.addWidget(self.textEdit)
 
         self.terminal = QTerminalWidget()
+        self.terminal.setMinimumWidth(450)
         self.mainLayout.addWidget(self.terminal)
 
         self.plotLayout = QVBoxLayout(self.centralwidget)
@@ -176,22 +178,92 @@ class MainWindow(QMainWindow):
         self.statusbar.setObjectName("statusbar")
         self.setStatusBar(self.statusbar)
 
-        self.n_sin = PaeNode(type=PaeType.Sine, id="sin")
-        n_square = PaeNode(type=PaeType.Square, id="square")
-        n_min = PaeNode(type=PaeType.Min, source=self.n_sin)
-        n_max = PaeNode(type=PaeType.Max, source=self.n_sin)
-        n_count = PaeNode(type=PaeType.Counter, source=n_square)
-
         self.xmotor = PaeMotor()
-
-        self.xmotor.add_node(self.n_sin)
-        self.xmotor.add_node(n_square)
-        self.xmotor.add_node(n_min)
-        self.xmotor.add_node(n_max)
-        self.xmotor.add_node(n_count)
+        self.xmotor.add_node(PaeNode(type=PaeType.Sine, name="Sine", id="sin"))
+        self.xmotor.add_node(
+            PaeNode(type=PaeType.Square, name="Square", id="sqr", period=3.0)
+        )
+        self.xmotor.add_node(
+            PaeNode(
+                type=PaeType.Random,
+                name="Random",
+                id="rnd",
+                offset=-0.125,
+                factor=0.25,
+            )
+        )
+        self.xmotor.add_node(
+            PaeNode(type=PaeType.Min, name="Min", source="sin", plot=False)
+        )
+        self.xmotor.add_node(
+            PaeNode(type=PaeType.Max, name="Max", source="sin", plot=False)
+        )
+        self.xmotor.add_node(
+            PaeNode(type=PaeType.Counter, name="Counter", source="sqr", plot=False)
+        )
+        self.xmotor.add_node(
+            PaeNode(
+                type=PaeType.Limit,
+                name="Limit",
+                source="sin",
+                min_limit=-0.5,
+                max_limit=0.8,
+            )
+        )
+        self.xmotor.add_node(
+            PaeNode(type=PaeType.Absolute, name="Absolute", source="sin")
+        )
+        self.xmotor.add_node(
+            PaeNode(
+                type=PaeType.Addition,
+                name="Sine + random",
+                source="sin",
+                term="rnd",
+            )
+        )
+        self.xmotor.add_node(
+            PaeNode(
+                type=PaeType.Multiply,
+                name="Sin chopped",
+                source="sin",
+                factor="sqr",
+            )
+        )
+        self.xmotor.add_node(
+            PaeNode(
+                type=PaeType.Sine,
+                id="sint",
+                name="Sine offset",
+                source="sin",
+                amplitude=6.0,
+                offset=8.0,
+            )
+        )
+        self.xmotor.add_node(
+            PaeNode(type=PaeType.Square, name="Square", id="sqr_v", period="sint")
+        )
+        self.xmotor.add_node(
+            PaeNode(
+                type=PaeType.Above,
+                name="Sine above",
+                source="sin",
+                threshold=0.5,
+            )
+        )
+        self.xmotor.add_node(
+            PaeNode(
+                type=PaeType.Below,
+                name="Sine below",
+                source="sin",
+                threshold=0.0,
+            )
+        )
+        self.xmotor.initiate()
 
         self.plots = []
         for nd in self.xmotor.nodes:
+            if nd.plot is False:
+                continue
             pl = PaePlot(node=nd)
             self.plotLayout.addWidget(pl)
             self.plots.append(pl)

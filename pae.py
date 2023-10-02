@@ -20,6 +20,8 @@ from math import sin
 from escape import Escape
 import time
 
+from random import random
+
 
 class PaeType(Enum):
     Normal = 0
@@ -32,20 +34,35 @@ class PaeType(Enum):
     Counter = 7
     Limit = 8
     RateLimit = 9
+    Addition = 10
+    Subtract = 11
+    Multiply = 12
+    Divide = 13
+    Multiply_Add = 14
+
+    Absolute = 40
+    Above = 41
+    Below = 42
 
     Sine = 100
     Square = 101
-    Noise = 200
+    Random = 102
+
+    Alarm_above = 200
+    Alarm_below = 201
+    Alarm_between = 203
 
 
 @dataclass
 class PaeObject:
     tick: int = 0
     enabled: bool = True
-    id: str = ""
+    #   id: str = ""
     name: str = ""
     desc: str = ""
     unit: str = ""
+    plot: bool = True
+    src_id: str = ""
 
     def enable(self, en: bool) -> None:
         self.enabled = en
@@ -53,14 +70,18 @@ class PaeObject:
     def is_enabled(self) -> bool:
         return self.enabled
 
-    def get_id(self) -> str:
-        if self.source is not None:
-            return self.source.get_id()
+    # def get_id(self) -> str:
+    #     return self.id
+    # if self.source is not None:
+    #     return self.source.get_id()
 
-        return self.id
+    # return self.id
 
     def set_id(self, id) -> None:
         self.id = id
+
+    def get_name(self) -> str:
+        return self.name
 
     def set_description(self, description) -> None:
         self.description = description
@@ -81,12 +102,24 @@ class PaeObject:
 class PaeNode(PaeObject):
     def __init__(
         self,
-        id: str = None,
+        id: str = "",
         desc: str = "",
+        name: str = "",
         type: PaeType = PaeType.Normal,
         source: PaeNode = None,
+        max_limit: float = 0.0,
+        min_limit: float = 0.0,
+        term: float = 0.0,
+        factor: float = 1.0,
+        offset: float = 0.0,
+        plot: bool = True,
+        param: bool = False,
+        threshold: float = 0.0,
+        period: float = 1.0,
+        amplitude: float = 1.0,
     ) -> None:
-        super().__init__(id=id)
+        super().__init__(name=name, plot=plot)
+        self.id = id
         self.value = 0.0
         self.last = 0.0
         self.type = type
@@ -94,15 +127,27 @@ class PaeNode(PaeObject):
         self.invalid = False
         self.no_data = False
         self.out_of_range = False
+        self.max_limit = max_limit
+        self.min_limit = min_limit
+        self.term = term
+        self.offset = offset
+        self.factor = factor
+        self.threshold = threshold
+        self.period = period
+        self.amplitude = amplitude
 
     def get_id(self) -> str:
-        if self.source is not None:
-            return self.source.get_id()
-
         return self.id
 
     def get_value(self) -> float:
         return self.value
+
+    def get(self, d) -> float:
+        if type(d) == float:
+            return d
+
+        if type(d) == PaeNode:
+            return d.get_value()
 
     def update(self) -> None:
         super().update()
@@ -136,7 +181,7 @@ class PaeNode(PaeObject):
             pass
 
         if self.type == PaeType.Sine:
-            sv = sin(self.tick / 20)
+            sv = self.get(self.amplitude) * sin(self.tick / 20) + self.get(self.offset)
             self.value = sv
             self.tick += 1
 
@@ -146,38 +191,102 @@ class PaeNode(PaeObject):
             else:
                 self.value = 0
             self.tick += 1
-            if self.tick > 5:
-                self.tick = -5
+            if self.tick > self.get(self.period):
+                self.tick = -self.get(self.period)
+            # if self.tick > 5:
+            #     self.tick = -5
+
+        if self.type == PaeType.Random:
+            self.value = self.offset + (self.factor * random())
+
+        if self.type == PaeType.Limit:
+            if sv > self.max_limit:
+                self.value = self.max_limit
+                return
+            if sv < self.min_limit:
+                self.value = self.min_limit
+                return
+            self.value = sv
+
+        if self.type == PaeType.Multiply:
+            self.value = sv * self.get(self.factor)
+
+        if self.type == PaeType.Multiply_Add:
+            self.value = sv * self.get(self.factor) + self.get(self.term)
+
+        if self.type == PaeType.Subtract:
+            self.value = sv - self.get(self.term)
+
+        if self.type == PaeType.Addition:
+            self.value = sv + self.get(self.term)
+
+        if self.type == PaeType.Absolute:
+            self.value = abs(sv)
+
+        if self.type == PaeType.Above:
+            if sv > self.threshold:
+                self.value = 1
+            else:
+                self.value = 0
+
+        if self.type == PaeType.Below:
+            if sv < self.threshold:
+                self.value = 1
+            else:
+                self.value = 0
 
     def __str__(self) -> str:
-        return f"{self.get_id():8} {self.type.name:10} {self.value:8.3f}"
-
-
-class PaeAlarm(PaeObject):
-    def __init__(self) -> None:
-        super().__init__()
+        return f"{self.get_name():16} {self.id:8} {self.type.name:16} {self.value:8.3f}"
 
 
 class PaeMotor(PaeObject):
     def __init__(self) -> None:
         super().__init__()
         self.nodes = []
-        self.alarms = []
         self.first = False
 
-    def add_node(self, node: PaeNode) -> None:
+    def add_node(self, node: PaeNode) -> PaeNode:
         self.nodes.append(node)
+        return node
 
-    def add_alarm(self, alarm: PaeAlarm) -> None:
-        self.alarms.append(alarm)
+    def find_id(self, id: str) -> PaeNode:
+        for node in self.nodes:
+            if node.id == id:
+                return node
+        return None
+
+    def initiate(self):
+        for node in self.nodes:
+            if type(node.source) == str:
+                node.source = self.find_id(node.source)
+
+            if type(node.term) == str:
+                node.term = self.find_id(node.term)
+
+            if type(node.factor) == str:
+                node.factor = self.find_id(node.factor)
+
+            if type(node.max_limit) == str:
+                node.max_limit = self.find_id(node.max_limit)
+
+            if type(node.min_limit) == str:
+                node.min_limit = self.find_id(node.min_limit)
+
+            if type(node.offset) == str:
+                node.offset = self.find_id(node.offset)
+
+            if type(node.threshold) == str:
+                node.threshold = self.find_id(node.threshold)
+
+            if type(node.period) == str:
+                node.period = self.find_id(node.period)
+
+            if type(node.amplitude) == str:
+                node.amplitude = self.find_id(node.amplitude)
 
     def update(self) -> None:
         for node in self.nodes:
             node.update()
-
-        for alarm in self.alarms:
-            alarm.update()
-        pass
 
     def printout(self) -> None:
         print(self, end="")
