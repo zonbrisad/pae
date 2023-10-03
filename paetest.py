@@ -188,8 +188,10 @@ class MainWindow(QMainWindow):
                 type=PaeType.Random,
                 name="Random",
                 id="rnd",
-                offset=-0.125,
-                factor=0.25,
+                offset=-0.25,
+                factor=0.5,
+                # offset=-0.125,
+                # factor=0.25,
             )
         )
         self.xmotor.add_node(
@@ -219,12 +221,22 @@ class MainWindow(QMainWindow):
                 name="Sine + random",
                 source="sin",
                 term="rnd",
+                id="sinrnd",
             )
         )
         self.xmotor.add_node(
             PaeNode(
+                type=PaeType.Average,
+                name="Average sin+rnd",
+                source="sinrnd",
+                average=10,
+            )
+        )
+
+        self.xmotor.add_node(
+            PaeNode(
                 type=PaeType.Multiply,
-                name="Sin chopped",
+                name="Sine * Square",
                 source="sin",
                 factor="sqr",
             )

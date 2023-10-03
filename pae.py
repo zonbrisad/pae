@@ -23,6 +23,27 @@ import time
 from random import random
 
 
+# class PaeFType(Enum):
+#     MovingAverage = 0
+#     IIR = 1
+#     FIR = 2
+
+
+@dataclass
+class PaeFilter:
+    len: int = 10
+
+    def __post_init__(self):
+        self.data = []
+
+    def update(self, new_val: float) -> float:
+        self.data.append(new_val)
+        if len(self.data) > self.len:
+            self.data.pop(0)
+
+        return sum(self.data) / len(self.data)
+
+
 class PaeType(Enum):
     Normal = 0
     Max = 1
@@ -117,6 +138,7 @@ class PaeNode(PaeObject):
         threshold: float = 0.0,
         period: float = 1.0,
         amplitude: float = 1.0,
+        average: int = 1,
     ) -> None:
         super().__init__(name=name, plot=plot)
         self.id = id
@@ -135,6 +157,10 @@ class PaeNode(PaeObject):
         self.threshold = threshold
         self.period = period
         self.amplitude = amplitude
+        self.average = average
+
+        if self.type == PaeType.Average:
+            self.filter = PaeFilter(self.average)
 
     def get_id(self) -> str:
         return self.id
@@ -178,7 +204,7 @@ class PaeNode(PaeObject):
             self.last = self.source.value
 
         if self.type == PaeType.Average:
-            pass
+            self.value = self.filter.update(sv)
 
         if self.type == PaeType.Sine:
             sv = self.get(self.amplitude) * sin(self.tick / 20) + self.get(self.offset)
@@ -208,6 +234,9 @@ class PaeNode(PaeObject):
                 return
             self.value = sv
 
+        if self.type == PaeType.RateLimit:
+            self.last = self.source.value
+
         if self.type == PaeType.Multiply:
             self.value = sv * self.get(self.factor)
 
@@ -236,7 +265,9 @@ class PaeNode(PaeObject):
                 self.value = 0
 
     def __str__(self) -> str:
-        return f"{self.get_name():16} {self.id:8} {self.type.name:16} {self.value:8.3f}"
+        return (
+            f"{self.get_name():16} {self.id:8} {self.type.name:16} {self.value:10.3f}"
+        )
 
 
 class PaeMotor(PaeObject):
@@ -304,17 +335,6 @@ class PaeMotor(PaeObject):
         for x in self.nodes:
             out += f"{str(x)}\n"
         return out
-
-
-class PaeFType:
-    MovingAverage = 0
-    IIR = 1
-    FIR = 2
-
-
-class PaeFilter(PaeObject):
-    def __init__(self) -> None:
-        super().__init__()
 
 
 def main() -> None:
