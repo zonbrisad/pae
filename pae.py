@@ -58,7 +58,7 @@ class PaeType(Enum):
     Addition = 10
     Subtract = 11
     Multiply = 12
-    Divide = 13
+    Division = 13
     Multiply_Add = 14
 
     Absolute = 40
@@ -82,7 +82,7 @@ class PaeObject:
     name: str = ""
     desc: str = ""
     unit: str = ""
-    plot: bool = True
+    # plot: bool = True
     src_id: str = ""
 
     def enable(self, en: bool) -> None:
@@ -139,8 +139,9 @@ class PaeNode(PaeObject):
         period: float = 1.0,
         amplitude: float = 1.0,
         average: int = 1,
+        divider: float = 1.0,
     ) -> None:
-        super().__init__(name=name, plot=plot)
+        super().__init__(name=name)
         self.id = id
         self.value = 0.0
         self.last = 0.0
@@ -158,6 +159,7 @@ class PaeNode(PaeObject):
         self.period = period
         self.amplitude = amplitude
         self.average = average
+        self.divider = divider
 
         if self.type == PaeType.Average:
             self.filter = PaeFilter(self.average)
@@ -240,6 +242,9 @@ class PaeNode(PaeObject):
         if self.type == PaeType.Multiply:
             self.value = sv * self.get(self.factor)
 
+        if self.type == PaeType.Division:
+            self.value = sv / self.get(self.divider)
+
         if self.type == PaeType.Multiply_Add:
             self.value = sv * self.get(self.factor) + self.get(self.term)
 
@@ -266,7 +271,7 @@ class PaeNode(PaeObject):
 
     def __str__(self) -> str:
         return (
-            f"{self.get_name():16} {self.id:8} {self.type.name:16} {self.value:10.3f}"
+            f"{self.get_name():24} {self.id:10} {self.type.name:16} {self.value:10.3f}"
         )
 
 
@@ -275,12 +280,15 @@ class PaeMotor(PaeObject):
         super().__init__()
         self.nodes = []
         self.first = False
+        self.plots = []
 
-    def add_node(self, node: PaeNode) -> PaeNode:
+    def add_node(self, node: PaeNode, plot: bool = True) -> PaeNode:
         self.nodes.append(node)
+        if plot is True:
+            self.plots.append(node)
         return node
 
-    def find_id(self, id: str) -> PaeNode:
+    def find_node(self, id: str) -> PaeNode:
         for node in self.nodes:
             if node.id == id:
                 return node
@@ -289,31 +297,34 @@ class PaeMotor(PaeObject):
     def initiate(self):
         for node in self.nodes:
             if type(node.source) == str:
-                node.source = self.find_id(node.source)
+                node.source = self.find_node(node.source)
 
             if type(node.term) == str:
-                node.term = self.find_id(node.term)
+                node.term = self.find_node(node.term)
 
             if type(node.factor) == str:
-                node.factor = self.find_id(node.factor)
+                node.factor = self.find_node(node.factor)
+
+            if type(node.divider) == str:
+                node.divider = self.find_node(node.divider)
 
             if type(node.max_limit) == str:
-                node.max_limit = self.find_id(node.max_limit)
+                node.max_limit = self.find_node(node.max_limit)
 
             if type(node.min_limit) == str:
-                node.min_limit = self.find_id(node.min_limit)
+                node.min_limit = self.find_node(node.min_limit)
 
             if type(node.offset) == str:
-                node.offset = self.find_id(node.offset)
+                node.offset = self.find_node(node.offset)
 
             if type(node.threshold) == str:
-                node.threshold = self.find_id(node.threshold)
+                node.threshold = self.find_node(node.threshold)
 
             if type(node.period) == str:
-                node.period = self.find_id(node.period)
+                node.period = self.find_node(node.period)
 
             if type(node.amplitude) == str:
-                node.amplitude = self.find_id(node.amplitude)
+                node.amplitude = self.find_node(node.amplitude)
 
     def update(self) -> None:
         for node in self.nodes:

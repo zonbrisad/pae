@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 #
-# asdf asdf asdf
+# Temperature test with PAE
 #
-# File:     xx
+# File:     temptest
 # Author:   Peter Malmberg  <peter.malmberg@gmail.com>
 # Org:      __ORGANISTATION__
 # Date:     2023-09-21
@@ -49,7 +49,7 @@ from paeplot import PaePlot
 
 
 class App:
-    NAME = "Paetest"
+    NAME = "Temptest"
     VERSION = "0.01"
     DESCRIPTION = "Program for testing pae graphicly"
     LICENSE = ""
@@ -179,111 +179,93 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.statusbar)
 
         self.motor = PaeMotor()
-        self.motor.add_node(PaeNode(type=PaeType.Sine, name="Sine", id="sin"))
-        self.motor.add_node(
-            PaeNode(type=PaeType.Square, name="Square", id="sqr", period=3.0)
-        )
-        self.motor.add_node(
+        self.temp = self.motor.add_node(
             PaeNode(
-                type=PaeType.Random,
-                name="Random",
-                id="rnd",
-                offset=-0.25,
-                factor=0.5,
-                # offset=-0.125,
-                # factor=0.25,
+                type=PaeType.Normal,
+                name="Temp raw",
+                id="temp_raw",
             )
         )
         self.motor.add_node(
-            PaeNode(type=PaeType.Min, name="Min", source="sin"), plot=False
-        )
-        self.motor.add_node(
-            PaeNode(type=PaeType.Max, name="Max", source="sin"), plot=False
-        )
-        self.motor.add_node(
-            PaeNode(type=PaeType.Counter, name="Counter", source="sqr"), plot=False
-        )
-        self.motor.add_node(
             PaeNode(
-                type=PaeType.Limit,
-                name="Limit",
-                source="sin",
-                min_limit=-0.5,
-                max_limit=0.8,
-            )
-        )
-        self.motor.add_node(
-            PaeNode(type=PaeType.Absolute, name="Absolute", source="sin")
-        )
-        self.motor.add_node(
-            PaeNode(
-                type=PaeType.Addition,
-                name="Sine + random",
-                source="sin",
-                term="rnd",
-                id="sinrnd",
+                type=PaeType.Division,
+                name="Temp",
+                id="temp_d",
+                source="temp_raw",
+                divider=1000.0,
             )
         )
         self.motor.add_node(
             PaeNode(
                 type=PaeType.Average,
-                name="Average sin+rnd",
-                source="sinrnd",
+                name="Temp filtered",
+                id="temp",
+                source="temp_d",
                 average=10,
             )
         )
+        self.motor.add_node(
+            PaeNode(
+                type=PaeType.Average,
+                name="Temp minute average",
+                id="temp_min",
+                source="temp_d",
+                average=60,
+            )
+        )
+        self.motor.add_node(
+            PaeNode(
+                type=PaeType.Average,
+                name="Temp hour average",
+                id="temp_hour",
+                source="temp_d",
+                average=3600,
+            )
+        )
 
-        self.motor.add_node(
-            PaeNode(
-                type=PaeType.Multiply,
-                name="Sine * Square",
-                source="sin",
-                factor="sqr",
-            )
-        )
-        self.motor.add_node(
-            PaeNode(
-                type=PaeType.Sine,
-                id="sint",
-                name="Sine offset",
-                source="sin",
-                amplitude=6.0,
-                offset=8.0,
-            )
-        )
-        self.motor.add_node(
-            PaeNode(type=PaeType.Square, name="Square", id="sqr_v", period="sint")
-        )
-        self.motor.add_node(
-            PaeNode(
-                type=PaeType.Above,
-                name="Sine above",
-                source="sin",
-                threshold=0.5,
-            )
-        )
-        self.motor.add_node(
-            PaeNode(
-                type=PaeType.Below,
-                name="Sine below",
-                source="sin",
-                threshold=0.0,
-            )
-        )
         self.motor.initiate()
 
         self.plots = []
-        for nd in self.motor.plots:
-            pl = PaePlot(node=nd)
-            self.plotLayout.addWidget(pl)
-            self.plots.append(pl)
+        for plot_node in self.motor.plots:
+            plot = PaePlot(node=plot_node)
+            self.plotLayout.addWidget(plot)
+            self.plots.append(plot)
+
+        self.add_plot("temp_min", 60, 120, title="Minute (avg)")
+        self.add_plot("temp_hour", 3600, 120, title="Hour (avg)")
 
         self.timer = QTimer()
-        self.timer.setInterval(100)
+        self.timer.setInterval(1000)
         self.timer.timeout.connect(self.timerx)
         self.timer.start()
 
+    def add_plot(
+        self,
+        node,
+        intervall=1,
+        dtp=1000,
+        title="",
+    ):
+        if type(node) == str:
+            nd = self.motor.find_node(node)
+        plot = PaePlot(node=nd, title=title, datapoints=dtp, intervall=intervall)
+        self.plotLayout.addWidget(plot)
+        self.plots.append(plot)
+
+    def read_val(self, file_name: str, row: int, col: int) -> float:
+        if os.path.isfile(file_name):
+            with open(file_name) as file:
+                lines = file.readlines()
+            line = lines[row - 1]
+            d = line.split(" ")
+            data = [x for x in d if x != ""]  # Remove empty strings
+            # logging.debug(data)
+            val = float(data[col - 1])
+            # print(f"{file_name} {val} {row} {col}")
+        return val
+
     def timerx(self) -> None:
+        self.temp.value = self.read_val("/sys/class/hwmon/hwmon3/temp1_input", 1, 1)
         self.motor.update()
         for pl in self.plots:
             pl.update()
