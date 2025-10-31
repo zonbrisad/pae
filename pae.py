@@ -171,10 +171,10 @@ class PaeNode(PaeObject):
         return self.value
 
     def get(self, d) -> float:
-        if type(d) == float:
+        if type(d) is float:
             return d
 
-        if type(d) == PaeNode:
+        if type(d) is PaeNode:
             return d.get_value()
 
     def update(self) -> None:
@@ -191,29 +191,29 @@ class PaeNode(PaeObject):
         if self.type == PaeType.Normal:
             self.value = sv
 
-        if self.type == PaeType.Min:
+        elif self.type == PaeType.Min:
             if sv < self.value:
                 self.value = sv
 
-        if self.type == PaeType.Max:
+        elif self.type == PaeType.Max:
             if sv > self.value:
                 self.value = sv
 
-        if self.type == PaeType.Counter:
+        elif self.type == PaeType.Counter:
             if self.source.value > 0.5 and self.last < 0.5:
                 self.value += 1
 
             self.last = self.source.value
 
-        if self.type == PaeType.Average:
+        elif self.type == PaeType.Average:
             self.value = self.filter.update(sv)
 
-        if self.type == PaeType.Sine:
+        elif self.type == PaeType.Sine:
             sv = self.get(self.amplitude) * sin(self.tick / 20) + self.get(self.offset)
             self.value = sv
             self.tick += 1
 
-        if self.type == PaeType.Square:
+        elif self.type == PaeType.Square:
             if self.tick > 0:
                 self.value = 1
             else:
@@ -224,10 +224,10 @@ class PaeNode(PaeObject):
             # if self.tick > 5:
             #     self.tick = -5
 
-        if self.type == PaeType.Random:
+        elif self.type == PaeType.Random:
             self.value = self.offset + (self.factor * random())
 
-        if self.type == PaeType.Limit:
+        elif self.type == PaeType.Limit:
             if sv > self.max_limit:
                 self.value = self.max_limit
                 return
@@ -236,34 +236,34 @@ class PaeNode(PaeObject):
                 return
             self.value = sv
 
-        if self.type == PaeType.RateLimit:
+        elif self.type == PaeType.RateLimit:
             self.last = self.source.value
 
-        if self.type == PaeType.Multiply:
+        elif self.type == PaeType.Multiply:
             self.value = sv * self.get(self.factor)
 
-        if self.type == PaeType.Division:
+        elif self.type == PaeType.Division:
             self.value = sv / self.get(self.divider)
 
-        if self.type == PaeType.Multiply_Add:
+        elif self.type == PaeType.Multiply_Add:
             self.value = sv * self.get(self.factor) + self.get(self.term)
 
-        if self.type == PaeType.Subtract:
+        elif self.type == PaeType.Subtract:
             self.value = sv - self.get(self.term)
 
-        if self.type == PaeType.Addition:
+        elif self.type == PaeType.Addition:
             self.value = sv + self.get(self.term)
 
-        if self.type == PaeType.Absolute:
+        elif self.type == PaeType.Absolute:
             self.value = abs(sv)
 
-        if self.type == PaeType.Above:
+        elif self.type == PaeType.Above:
             if sv > self.threshold:
                 self.value = 1
             else:
                 self.value = 0
 
-        if self.type == PaeType.Below:
+        elif self.type == PaeType.Below:
             if sv < self.threshold:
                 self.value = 1
             else:
@@ -296,34 +296,34 @@ class PaeMotor(PaeObject):
 
     def initiate(self):
         for node in self.nodes:
-            if type(node.source) == str:
+            if type(node.source) is str:
                 node.source = self.find_node(node.source)
 
-            if type(node.term) == str:
+            if type(node.term) is str:
                 node.term = self.find_node(node.term)
 
-            if type(node.factor) == str:
+            if type(node.factor) is str:
                 node.factor = self.find_node(node.factor)
 
-            if type(node.divider) == str:
+            if type(node.divider) is str:
                 node.divider = self.find_node(node.divider)
 
-            if type(node.max_limit) == str:
+            if type(node.max_limit) is str:
                 node.max_limit = self.find_node(node.max_limit)
 
-            if type(node.min_limit) == str:
+            if type(node.min_limit) is str:
                 node.min_limit = self.find_node(node.min_limit)
 
-            if type(node.offset) == str:
+            if type(node.offset) is str:
                 node.offset = self.find_node(node.offset)
 
-            if type(node.threshold) == str:
+            if type(node.threshold) is str:
                 node.threshold = self.find_node(node.threshold)
 
-            if type(node.period) == str:
+            if type(node.period) is str:
                 node.period = self.find_node(node.period)
 
-            if type(node.amplitude) == str:
+            if type(node.amplitude) is str:
                 node.amplitude = self.find_node(node.amplitude)
 
     def update(self) -> None:

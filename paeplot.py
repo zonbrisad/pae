@@ -13,11 +13,9 @@
 #
 # ----------------------------------------------------------------------------
 
-from dataclasses import dataclass
 import pyqtgraph as pg
 from pae import PaeNode
 
-# pen = pg.mkPen(color=(255, 0, 100), width=1)
 pen = pg.mkPen(color="#ff00ff", width=1)
 
 

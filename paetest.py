@@ -13,11 +13,9 @@
 #
 # ----------------------------------------------------------------------------
 
-from ast import Add
 import traceback
 import os
 import sys
-import logging
 import argparse
 from PyQt5.QtCore import Qt, QTimer, QSettings, QIODevice
 from PyQt5.QtGui import QIcon, QCloseEvent
@@ -44,7 +42,6 @@ from PyQt5.QtWidgets import (
 
 from qterminalwidget import QTerminalWidget
 from pae import PaeNode, PaeMotor, PaeType
-from simpleplot import SimplePlot
 from paeplot import PaePlot
 
 
@@ -179,9 +176,19 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.statusbar)
 
         self.motor = PaeMotor()
-        self.motor.add_node(PaeNode(type=PaeType.Sine, name="Sine", id="sin"))
         self.motor.add_node(
-            PaeNode(type=PaeType.Square, name="Square", id="sqr", period=3.0)
+            PaeNode(
+                type=PaeType.Sine,
+                name="Sine", 
+                id="sin")
+            )
+        self.motor.add_node(
+            PaeNode(
+                type=PaeType.Square,
+                name="Square",
+                id="sqr",
+                period=3.0
+            )
         )
         self.motor.add_node(
             PaeNode(
@@ -195,13 +202,25 @@ class MainWindow(QMainWindow):
             )
         )
         self.motor.add_node(
-            PaeNode(type=PaeType.Min, name="Min", source="sin"), plot=False
+            PaeNode(
+                type=PaeType.Min,
+                name="Min",
+                source="sin"),
+            plot=False
         )
         self.motor.add_node(
-            PaeNode(type=PaeType.Max, name="Max", source="sin"), plot=False
+            PaeNode(
+                type=PaeType.Max,
+                name="Max",
+                source="sin"),
+            plot=False
         )
         self.motor.add_node(
-            PaeNode(type=PaeType.Counter, name="Counter", source="sqr"), plot=False
+            PaeNode(
+                type=PaeType.Counter,
+                name="Counter",
+                source="sqr"),
+            plot=False
         )
         self.motor.add_node(
             PaeNode(
@@ -213,7 +232,11 @@ class MainWindow(QMainWindow):
             )
         )
         self.motor.add_node(
-            PaeNode(type=PaeType.Absolute, name="Absolute", source="sin")
+            PaeNode(
+                type=PaeType.Absolute,
+                name="Absolute",
+                source="sin"
+            )
         )
         self.motor.add_node(
             PaeNode(
@@ -252,7 +275,11 @@ class MainWindow(QMainWindow):
             )
         )
         self.motor.add_node(
-            PaeNode(type=PaeType.Square, name="Square", id="sqr_v", period="sint")
+            PaeNode(
+                type=PaeType.Square,
+                name="Square",
+                id="sqr_v",
+                period="sint")
         )
         self.motor.add_node(
             PaeNode(
