@@ -65,6 +65,8 @@ class PaeType(Enum):
     Above = 41
     Below = 42
 
+    CountDownTimer = 80
+
     Sine = 100
     Square = 101
     Random = 102
@@ -140,6 +142,7 @@ class PaeNode(PaeObject):
         amplitude: float = 1.0,
         average: int = 1,
         divider: float = 1.0,
+        trigger: bool = False,
     ) -> None:
         super().__init__(name=name)
         self.id = id
@@ -160,6 +163,8 @@ class PaeNode(PaeObject):
         self.amplitude = amplitude
         self.average = average
         self.divider = divider
+        self.trigger = trigger
+        self.new_value = None
 
         if self.type == PaeType.Average:
             self.filter = PaeFilter(self.average)
@@ -169,6 +174,9 @@ class PaeNode(PaeObject):
 
     def get_value(self) -> float:
         return self.value
+
+    def set_value(self, value: float) -> None:
+        self.new_value = value
 
     def get(self, d) -> float:
         if type(d) is float:
@@ -180,16 +188,22 @@ class PaeNode(PaeObject):
     def update(self) -> None:
         super().update()
 
-        if not self.is_enabled():
+        if self.is_enabled() is False:
             return
+
+        if self.new_value is not None:
+            self.value = self.new_value
+            print(f"New value set: {self.new_value} ")
+            self.new_value = None
+
+        sv = self.value
 
         if self.source is not None:
             sv = self.source.get_value()
-        else:
-            sv = self.value
 
         if self.type == PaeType.Normal:
             self.value = sv
+            print(f"Normalvalue set: {self.value} ")
 
         elif self.type == PaeType.Min:
             if sv < self.value:
@@ -268,6 +282,17 @@ class PaeNode(PaeObject):
                 self.value = 1
             else:
                 self.value = 0
+
+        elif self.type == PaeType.CountDownTimer:
+
+            if self.value > 0:
+                self.value -= 1
+
+            if self.trigger is True:
+                self.value = 200
+                self.trigger = False
+
+            self.last = sv
 
     def __str__(self) -> str:
         return (

@@ -26,18 +26,18 @@ from PyQt5.QtWidgets import (
     QMenuBar,
     QAction,
     QStatusBar,
-    QDialog,
     QVBoxLayout,
     QHBoxLayout,
-    QTextEdit,
+    QDialog,
+    QFileDialog,
     QDialogButtonBox,
-    QPushButton,
     QMessageBox,
     QWidget,
     QLabel,
-    QFileDialog,
-    QSpacerItem,
-    QSizePolicy,
+    QPushButton,
+    QTextEdit,
+    QCheckBox,
+    QSlider
 )
 
 from qterminalwidget import QTerminalWidget
@@ -126,7 +126,15 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.centralwidget)
         self.mainLayout = QHBoxLayout(self.centralwidget)
         self.mainLayout.setSpacing(2)
-        self.mainLayout.setContentsMargins(2, 2, 2, 2)
+
+        self.leftLayout = QVBoxLayout(self.centralwidget)
+        self.leftLayout.setSpacing(2)
+        self.mainLayout.addLayout(self.leftLayout)
+
+        self.buttonLayout = QHBoxLayout(self.centralwidget)
+        self.buttonLayout.setSpacing(2)
+        self.buttonLayout.setContentsMargins(2, 2, 2, 2)
+        self.leftLayout.addLayout(self.buttonLayout)
 
         # # TextEdit
         # self.textEdit = QTextEdit(self.centralwidget)
@@ -134,11 +142,27 @@ class MainWindow(QMainWindow):
 
         self.terminal = QTerminalWidget()
         self.terminal.setMinimumWidth(550)
-        self.mainLayout.addWidget(self.terminal)
+        self.leftLayout.addWidget(self.terminal)
 
         self.plotLayout = QVBoxLayout(self.centralwidget)
         self.plotLayout.setSpacing(2)
         self.mainLayout.addLayout(self.plotLayout)
+
+        self.triggerButton = QPushButton("Trigger timer", self.centralwidget)
+        self.triggerButton.clicked.connect(self.trigger_timer)
+        self.buttonLayout.addWidget(self.triggerButton)
+
+        self.checkbox = QCheckBox("Checkbox", self.centralwidget)
+        self.checkbox.stateChanged.connect(self.state_changed)
+        self.buttonLayout.addWidget(self.checkbox)
+
+        self.slider = QSlider(Qt.Horizontal, self.centralwidget)
+        self.slider.setMinimum(0)
+        self.slider.setMaximum(100)
+        self.slider.valueChanged.connect(self.set_aslider)
+        self.buttonLayout.addWidget(self.slider)
+
+        self.buttonLayout.addStretch()
 
         # Menubar
         self.menubar = QMenuBar(self)
@@ -179,7 +203,7 @@ class MainWindow(QMainWindow):
         self.motor.add_node(
             PaeNode(
                 type=PaeType.Sine,
-                name="Sine", 
+                name="Sine",
                 id="sin")
             )
         self.motor.add_node(
@@ -297,6 +321,26 @@ class MainWindow(QMainWindow):
                 threshold=0.0,
             )
         )
+        self.cd_timer = self.motor.add_node(
+            PaeNode(
+                type=PaeType.CountDownTimer,
+                name="Count down timer",
+                source="",
+                trigger=False
+            )
+        )
+        self.on_off = self.motor.add_node(
+            PaeNode(
+                type=PaeType.Normal,
+                name="On/Off",
+                id="onoff")
+        )
+        self.aslider = self.motor.add_node(
+            PaeNode(
+                type=PaeType.Normal,
+                name="Analog Slider",
+                id="aslider")
+        )
         self.motor.initiate()
 
         self.plots = []
@@ -317,6 +361,19 @@ class MainWindow(QMainWindow):
 
         d = str(self.motor)
         self.terminal.append_terminal_text(d)
+
+    def trigger_timer(self) -> None:
+        self.cd_timer.trigger = True
+
+    def state_changed(self, state: int) -> None:
+        print(f"Checkbox state changed: {state}")
+        if state == Qt.Checked:
+            self.on_off.set_value(1)
+        else:
+            self.on_off.set_value(0)
+            
+    def set_aslider(self, value: float) -> None:
+        self.aslider.set_value(value)
 
     def exit(self):
         msgBox = QMessageBox()
