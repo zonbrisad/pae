@@ -17,8 +17,9 @@ import traceback
 import os
 import sys
 import argparse
-from PyQt5.QtCore import Qt, QTimer, QSettings, QIODevice
-from PyQt5.QtGui import QIcon, QCloseEvent
+import logging
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -33,7 +34,6 @@ from PyQt5.QtWidgets import (
     QDialogButtonBox,
     QMessageBox,
     QWidget,
-    QLabel,
     QPushButton,
     QTextEdit,
     QCheckBox,
@@ -59,7 +59,7 @@ class App:
 
 # Qt main window settings
 win_title = App.NAME
-win_x_size = 800
+win_x_size = 1800
 win_y_size = 240
 
 
@@ -360,18 +360,19 @@ class MainWindow(QMainWindow):
             pl.update()
 
         d = str(self.motor)
-        self.terminal.append_terminal_text(d)
+        self.terminal.append_ansi_text(d)
+        print(d, end='')
 
     def trigger_timer(self) -> None:
         self.cd_timer.trigger = True
 
     def state_changed(self, state: int) -> None:
-        print(f"Checkbox state changed: {state}")
+        logging.debug(f"Checkbox state changed: {state}")
         if state == Qt.Checked:
             self.on_off.set_value(1)
         else:
             self.on_off.set_value(0)
-            
+
     def set_aslider(self, value: float) -> None:
         self.aslider.set_value(value)
 

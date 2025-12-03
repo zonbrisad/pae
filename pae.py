@@ -17,8 +17,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from math import sin
-from escape import Escape
 import time
+import logging
+from escape import Ansi
 
 from random import random
 
@@ -28,6 +29,21 @@ from random import random
 #     IIR = 1
 #     FIR = 2
 
+
+string_with_html = """
+    <body>
+    <h1>Python Automation Engine - PAE</h1>
+    <p>Python Automation Engine (PAE) is a lightweight framework for building automation and control systems using Python. It provides a modular architecture that allows users to create and manage various components, such as sensors, actuators, and controllers, in a flexible and efficient manner.</p>
+    <h2>Features</h2>
+    <ul>
+        <li>Modular design for easy integration of different components</li>
+        <li>Support for various communication protocols (e.g., MQTT, Modbus, HTTP)</li>
+        <li>Real-time data processing and event handling</li>
+        <li>Built-in support for common automation tasks (e.g., scheduling, logging, alerting)</li>
+        <li>Extensible architecture for custom component development</li>
+    </ul>
+</body>
+"""
 
 @dataclass
 class PaeFilter:
@@ -193,7 +209,7 @@ class PaeNode(PaeObject):
 
         if self.new_value is not None:
             self.value = self.new_value
-            print(f"New value set: {self.new_value} ")
+            logging.debug(f"New value set: {self.new_value} ")
             self.new_value = None
 
         sv = self.value
@@ -203,8 +219,7 @@ class PaeNode(PaeObject):
 
         if self.type == PaeType.Normal:
             self.value = sv
-            print(f"Normalvalue set: {self.value} ")
-
+            logging.debug(f"Normal value set: {self.value} ")
         elif self.type == PaeType.Min:
             if sv < self.value:
                 self.value = sv
@@ -304,7 +319,7 @@ class PaeMotor(PaeObject):
     def __init__(self) -> None:
         super().__init__()
         self.nodes = []
-        self.first = False
+        self.first_run = False
         self.plots = []
 
     def add_node(self, node: PaeNode, plot: bool = True) -> PaeNode:
@@ -360,13 +375,14 @@ class PaeMotor(PaeObject):
 
     def __str__(self) -> str:
         out = ""
-        if self.first is not True:
+        if self.first_run is not True:
             for _ in self.nodes:
                 out += "\n"
-            self.first = True
+            self.first_run = True
 
+        # out += Ansi.HOME
         for _ in self.nodes:
-            out += Escape.UP
+            out += Ansi.RETURN
 
         for x in self.nodes:
             out += f"{str(x)}\n"
