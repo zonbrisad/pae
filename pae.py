@@ -205,7 +205,7 @@ class PaeNode(PaeObject):
         if self.get_source() is None:
             return True
 
-        return self.get_source().is_enabled()    
+        return self.get_source().is_enabled()  
 
     def update(self) -> None:
         super().update()
@@ -318,12 +318,17 @@ class PaeNode(PaeObject):
     def __str__(self) -> str:
 
         if self.is_enabled() is True:
-            x = "E"
+            enabled = "E"
         else:
-            x = "D"
+            enabled = "D"
+
+        if self.source_enabled() is False:
+            n_src = "SD"
+        else:
+            n_src = "  "
 
         return (
-            f"{self.get_name():24} {self.id:10} {self.type.name:16} {self.value:10.3f}  {x:2}"
+            f"{self.get_name():24} {self.id:10} {self.type.name:16} {self.value:10.3f}  {enabled:1} {n_src:2}"
         )
 
 
@@ -396,8 +401,8 @@ class PaeMotor(PaeObject):
         for _ in self.nodes:
             out += Ansi.RETURN
 
-        for x in self.nodes:
-            out += f"{str(x)}\n"
+        for node in self.nodes:
+            out += f"{str(node)}\n"
         return out
 
 

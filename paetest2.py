@@ -29,20 +29,19 @@ from PyQt5.QtWidgets import (
     QStatusBar,
     QVBoxLayout,
     QHBoxLayout,
-    QDialog,
     QFileDialog,
-    QDialogButtonBox,
     QMessageBox,
     QWidget,
     QPushButton,
     QTextEdit,
     QCheckBox,
-    QSlider
+    QSlider,
+    QLineEdit,
 )
 
-from qterminalwidget import QTerminalWidget
 from pae import PaeNode, PaeMotor, PaeType
 from paeplot import PaePlot
+from aboutdialog import AboutDialog
 
 
 class App:
@@ -81,36 +80,76 @@ about_html = f"""
 """
 
 
-class AboutDialog(QDialog):
-    def __init__(self, parent=None):
-        super(AboutDialog, self).__init__(parent)
+class NodeWidget(QWidget):
+    def __init__(self, node: PaeNode, parent=None):
+        super().__init__(parent)
+        self.node = node
+        self.layout = QHBoxLayout(self)
+        self.layout.setSpacing(2)
+        self.setLayout(self.layout)
 
-        self.setWindowTitle(App.NAME)
-        self.setWindowModality(Qt.ApplicationModal)
-        self.resize(400, 300)
+        self.node_enabled = QCheckBox("", self)
+        self.node_enabled.setChecked(self.node.enabled)
+        self.node_enabled.stateChanged.connect(self.node_enable_changed)
+        self.layout.addWidget(self.node_enabled)
 
-        self.verticalLayout = QVBoxLayout(self)
-        self.verticalLayout.setSpacing(2)
-        self.setLayout(self.verticalLayout)
+        self.label = QLineEdit(self)
+        self.label.setText(f"{self.node.get_name()}:")
+        self.label.setReadOnly(True)
+        self.label.setFixedWidth(150)
+        self.layout.addWidget(self.label)
 
-        # TextEdit
-        self.textEdit = QTextEdit(self)
-        self.textEdit.setReadOnly(True)
-        self.verticalLayout.addWidget(self.textEdit)
-        self.textEdit.insertHtml(about_html)
+        self.id_label = QLineEdit(self)
+        self.id_label.setText(f"{self.node.id}")
+        self.id_label.setReadOnly(True)
+        self.id_label.setFixedWidth(120)
+        self.layout.addWidget(self.id_label)
 
-        # Buttonbox
-        self.buttonBox = QDialogButtonBox(self)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Ok)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.setCenterButtons(True)
-        self.verticalLayout.addWidget(self.buttonBox)
+        self.type_label = QLineEdit(self)
+        self.type_label.setText(f"{self.node.type.name}")
+        self.type_label.setReadOnly(True)
+        self.type_label.setFixedWidth(140)
+        self.layout.addWidget(self.type_label)
 
-    @staticmethod
-    def about(parent=None):
-        dialog = AboutDialog(parent)
-        result = dialog.exec_()
-        return result == QDialog.Accepted
+        self.flags_label = QLineEdit(self)
+        self.flags_label.setReadOnly(True)
+        self.flags_label.setFixedWidth(60)
+        self.layout.addWidget(self.flags_label)
+
+        self.value_label = QLineEdit(self)
+        self.value_label.setReadOnly(True)
+        self.value_label.setFixedWidth(100)
+        self.layout.addWidget(self.value_label)
+
+        self.pl = PaePlot(node=node)
+        self.layout.addWidget(self.pl)
+        self.update()
+
+    def node_enable_changed(self, state: int) -> None:
+        logging.debug(f"Node {self.node.get_name()} enabled state changed: {state}")
+        if state == Qt.Checked:
+            self.node.enable(True)
+        else:
+            self.node.enable(False)
+
+    def update(self) -> None:
+
+        self.value_label.setText(f"{self.node.value:.3f}")
+        if self.node.is_enabled() is True:
+            enabled = "E"
+        else:
+            enabled = "D"
+
+        if self.node.source_enabled() is False:
+            n_src = "SD"
+        else:
+            n_src = "  "
+
+        self.flags_label.setText(
+            f"{enabled:1} {n_src:2}"
+        )
+
+        self.pl.update()
 
 
 class MainWindow(QMainWindow):
@@ -136,14 +175,6 @@ class MainWindow(QMainWindow):
         self.buttonLayout.setContentsMargins(2, 2, 2, 2)
         self.leftLayout.addLayout(self.buttonLayout)
 
-        # # TextEdit
-        # self.textEdit = QTextEdit(self.centralwidget)
-        # self.plotLayout.addWidget(self.textEdit)
-
-        self.terminal = QTerminalWidget()
-        self.terminal.setMinimumWidth(550)
-        self.leftLayout.addWidget(self.terminal)
-
         self.plotLayout = QVBoxLayout(self.centralwidget)
         self.plotLayout.setSpacing(2)
         self.mainLayout.addLayout(self.plotLayout)
@@ -155,10 +186,6 @@ class MainWindow(QMainWindow):
         self.checkbox = QCheckBox("Checkbox", self.centralwidget)
         self.checkbox.stateChanged.connect(self.state_changed)
         self.buttonLayout.addWidget(self.checkbox)
-        
-        self.sin_enabled_checkbox = QCheckBox("Sine enabled", self.centralwidget, checked=True)
-        self.sin_enabled_checkbox.stateChanged.connect(self.sin_enabled_changed)
-        self.buttonLayout.addWidget(self.sin_enabled_checkbox)
 
         self.slider = QSlider(Qt.Horizontal, self.centralwidget)
         self.slider.setMinimum(0)
@@ -194,7 +221,7 @@ class MainWindow(QMainWindow):
 
         self.actionAbout = QAction("About", self)
         self.actionAbout.setStatusTip("About")
-        self.actionAbout.triggered.connect(lambda: AboutDialog.about())
+        self.actionAbout.triggered.connect(lambda: AboutDialog.about(about=about_html, title=App.NAME, parent=self))
         self.menuHelp.addAction(self.actionAbout)
 
         # Statusbar
@@ -225,8 +252,6 @@ class MainWindow(QMainWindow):
                 id="rnd",
                 offset=-0.25,
                 factor=0.5,
-                # offset=-0.125,
-                # factor=0.25,
             )
         )
         self.motor.add_node(
@@ -297,7 +322,6 @@ class MainWindow(QMainWindow):
                 type=PaeType.Sine,
                 id="sint",
                 name="Sine offset",
-                #source="sin",
                 amplitude=6.0,
                 offset=8.0,
             )
@@ -347,11 +371,11 @@ class MainWindow(QMainWindow):
         )
         self.motor.initiate()
 
-        self.plots = []
+        self.node_widgets = []
         for nd in self.motor.plots:
-            pl = PaePlot(node=nd)
-            self.plotLayout.addWidget(pl)
-            self.plots.append(pl)
+            nw = NodeWidget(node=nd)
+            self.leftLayout.addWidget(nw)
+            self.node_widgets.append(nw)
 
         self.timer = QTimer()
         self.timer.setInterval(100)
@@ -360,12 +384,8 @@ class MainWindow(QMainWindow):
 
     def timerx(self) -> None:
         self.motor.update()
-        for pl in self.plots:
-            pl.update()
-
-        d = str(self.motor)
-        self.terminal.append_ansi_text(d)
-        #print(d, end='')
+        for nw in self.node_widgets:
+            nw.update()
 
     def trigger_timer(self) -> None:
         self.cd_timer.trigger = True
@@ -379,15 +399,7 @@ class MainWindow(QMainWindow):
 
     def set_aslider(self, value: float) -> None:
         self.aslider.set_value(value)
-        
-    def sin_enabled_changed(self, state: int) -> None:
-        logging.debug(f"Sine enabled checkbox state changed: {state}")
-        #sin_node = self.motor.get_node_by_id("sin")
-        if state == Qt.Checked:
-            self.node_sine.enable(True)
-        else:
-            self.node_sine.enable(False)
-            
+
     def exit(self):
         msgBox = QMessageBox()
         msgBox.setIcon(QMessageBox.Information)
