@@ -128,12 +128,6 @@ class PaeObject:
     def get_description(self) -> str:
         return self.description
 
-    def set_source(self, source: PaeNode) -> None:
-        self.source = source
-
-    def get_source(self) -> PaeNode:
-        return self.source
-
     def update(self) -> None:
         pass
 
@@ -200,6 +194,18 @@ class PaeNode(PaeObject):
 
         if type(d) is PaeNode:
             return d.get_value()
+
+    def set_source(self, source: PaeNode) -> None:
+        self.source = source
+
+    def get_source(self) -> PaeNode:
+        return self.source
+
+    def source_enabled(self) -> bool:
+        if self.get_source() is None:
+            return True
+
+        return self.get_source().is_enabled()    
 
     def update(self) -> None:
         super().update()
@@ -310,8 +316,14 @@ class PaeNode(PaeObject):
             self.last = sv
 
     def __str__(self) -> str:
+
+        if self.is_enabled() is True:
+            x = "E"
+        else:
+            x = "D"
+
         return (
-            f"{self.get_name():24} {self.id:10} {self.type.name:16} {self.value:10.3f}"
+            f"{self.get_name():24} {self.id:10} {self.type.name:16} {self.value:10.3f}  {x:2}"
         )
 
 
@@ -391,18 +403,18 @@ class PaeMotor(PaeObject):
 
 def main() -> None:
     n_sin = PaeNode(type=PaeType.Sine, id="sin")
-    n_square = PaeNode(type=PaeType.Square, id="square")
+    n_sqr = PaeNode(type=PaeType.Square, id="square")
     n_min = PaeNode(type=PaeType.Min, source=n_sin)
     n_max = PaeNode(type=PaeType.Max, source=n_sin)
-    n_count = PaeNode(type=PaeType.Counter, source=n_square)
+    n_cnt = PaeNode(type=PaeType.Counter, source=n_sqr)
 
     motor = PaeMotor()
 
     motor.add_node(n_sin)
-    motor.add_node(n_square)
+    motor.add_node(n_sqr)
     motor.add_node(n_min)
     motor.add_node(n_max)
-    motor.add_node(n_count)
+    motor.add_node(n_cnt)
 
     for i in range(1, 100):
         motor.update()
