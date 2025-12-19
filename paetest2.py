@@ -37,6 +37,7 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QSlider,
     QLineEdit,
+    QScrollArea
 )
 from qpaewidgets import QPaeNode
 
@@ -95,6 +96,18 @@ class MainWindow(QMainWindow):
         self.main_layout = QVBoxLayout(self.centralwidget)
         self.main_layout.setSpacing(0)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.node_layout = QVBoxLayout()
+        self.node_layout.setSpacing(0)
+        self.node_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.scroll_content = QWidget()
+        self.scroll_content.setLayout(self.node_layout)
+        self.scroll_area = QScrollArea(self.centralwidget)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(self.scroll_content)
+        
+        self.main_layout.addWidget(self.scroll_area)
 
         # Menubar
         self.menubar = QMenuBar(self)
@@ -271,7 +284,7 @@ class MainWindow(QMainWindow):
         self.node_widgets = []
         for nd in self.motor.nodes:
             nw = QPaeNode(node=nd, parent=self.centralwidget)
-            self.main_layout.addWidget(nw)
+            self.node_layout.addWidget(nw)
             self.node_widgets.append(nw)
 
         self.timer = QTimer()
