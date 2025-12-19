@@ -30,9 +30,8 @@ class PaePlot(pg.PlotWidget):
         if title != "":
             self.setTitle(title)
         else:
-            # self.setTitle(node.get_name())
-            self.setTitle(None)
-
+            self.setTitle(node.get_name())
+            
         self.x = list(range(self.datapoints))
         self.y = [0 for _ in range(self.datapoints)]
         self.line = self.plot(self.x, self.y, pen=pen)

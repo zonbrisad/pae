@@ -339,10 +339,8 @@ class PaeMotor(PaeObject):
         self.first_run = False
         self.plots = []
 
-    def add_node(self, node: PaeNode, plot: bool = True) -> PaeNode:
+    def add_node(self, node: PaeNode) -> PaeNode:
         self.nodes.append(node)
-        if plot is True:
-            self.plots.append(node)
         return node
 
     def find_node(self, id: str) -> PaeNode:

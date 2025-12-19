@@ -38,9 +38,9 @@ from PyQt5.QtWidgets import (
     QSlider,
     QLineEdit,
 )
+from qpaewidgets import QPaeNode
 
 from pae import PaeNode, PaeMotor, PaeType
-from paeplot import PaePlot
 from aboutdialog import AboutDialog
 
 
@@ -78,78 +78,6 @@ about_html = f"""
 {App.DESCRIPTION}
 <br>
 """
-
-
-class NodeWidget(QWidget):
-    def __init__(self, node: PaeNode, parent=None):
-        super().__init__(parent)
-        self.node = node
-        self.layout = QHBoxLayout(self)
-        self.layout.setSpacing(2)
-        self.setLayout(self.layout)
-
-        self.node_enabled = QCheckBox("", self)
-        self.node_enabled.setChecked(self.node.enabled)
-        self.node_enabled.stateChanged.connect(self.node_enable_changed)
-        self.layout.addWidget(self.node_enabled)
-
-        self.label = QLineEdit(self)
-        self.label.setText(f"{self.node.get_name()}:")
-        self.label.setReadOnly(True)
-        self.label.setFixedWidth(150)
-        self.layout.addWidget(self.label)
-
-        self.id_label = QLineEdit(self)
-        self.id_label.setText(f"{self.node.id}")
-        self.id_label.setReadOnly(True)
-        self.id_label.setFixedWidth(120)
-        self.layout.addWidget(self.id_label)
-
-        self.type_label = QLineEdit(self)
-        self.type_label.setText(f"{self.node.type.name}")
-        self.type_label.setReadOnly(True)
-        self.type_label.setFixedWidth(140)
-        self.layout.addWidget(self.type_label)
-
-        self.flags_label = QLineEdit(self)
-        self.flags_label.setReadOnly(True)
-        self.flags_label.setFixedWidth(60)
-        self.layout.addWidget(self.flags_label)
-
-        self.value_label = QLineEdit(self)
-        self.value_label.setReadOnly(True)
-        self.value_label.setFixedWidth(100)
-        self.layout.addWidget(self.value_label)
-
-        self.pl = PaePlot(node=node)
-        self.layout.addWidget(self.pl)
-        self.update()
-
-    def node_enable_changed(self, state: int) -> None:
-        logging.debug(f"Node {self.node.get_name()} enabled state changed: {state}")
-        if state == Qt.Checked:
-            self.node.enable(True)
-        else:
-            self.node.enable(False)
-
-    def update(self) -> None:
-
-        self.value_label.setText(f"{self.node.value:.3f}")
-        if self.node.is_enabled() is True:
-            enabled = "E"
-        else:
-            enabled = "D"
-
-        if self.node.source_enabled() is False:
-            n_src = "SD"
-        else:
-            n_src = "  "
-
-        self.flags_label.setText(
-            f"{enabled:1} {n_src:2}"
-        )
-
-        self.pl.update()
 
 
 class MainWindow(QMainWindow):
@@ -259,21 +187,18 @@ class MainWindow(QMainWindow):
                 type=PaeType.Min,
                 name="Min",
                 source="sin"),
-            plot=False
         )
         self.motor.add_node(
             PaeNode(
                 type=PaeType.Max,
                 name="Max",
                 source="sin"),
-            plot=False
         )
         self.motor.add_node(
             PaeNode(
                 type=PaeType.Counter,
                 name="Counter",
                 source="sqr"),
-            plot=False
         )
         self.motor.add_node(
             PaeNode(
@@ -308,7 +233,6 @@ class MainWindow(QMainWindow):
                 average=10,
             )
         )
-
         self.motor.add_node(
             PaeNode(
                 type=PaeType.Multiply,
@@ -372,8 +296,8 @@ class MainWindow(QMainWindow):
         self.motor.initiate()
 
         self.node_widgets = []
-        for nd in self.motor.plots:
-            nw = NodeWidget(node=nd)
+        for nd in self.motor.nodes:
+            nw = QPaeNode(node=nd)
             self.leftLayout.addWidget(nw)
             self.node_widgets.append(nw)
 

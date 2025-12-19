@@ -234,21 +234,18 @@ class MainWindow(QMainWindow):
                 type=PaeType.Min,
                 name="Min",
                 source="sin"),
-            plot=False
         )
         self.motor.add_node(
             PaeNode(
                 type=PaeType.Max,
                 name="Max",
                 source="sin"),
-            plot=False
         )
         self.motor.add_node(
             PaeNode(
                 type=PaeType.Counter,
                 name="Counter",
                 source="sqr"),
-            plot=False
         )
         self.motor.add_node(
             PaeNode(
@@ -348,7 +345,7 @@ class MainWindow(QMainWindow):
         self.motor.initiate()
 
         self.plots = []
-        for nd in self.motor.plots:
+        for nd in self.motor.nodes:
             pl = PaePlot(node=nd)
             self.plotLayout.addWidget(pl)
             self.plots.append(pl)
