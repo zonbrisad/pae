@@ -136,17 +136,13 @@ class MainWindow(QMainWindow):
         self.buttonLayout.setContentsMargins(2, 2, 2, 2)
         self.leftLayout.addLayout(self.buttonLayout)
 
-        # # TextEdit
-        # self.textEdit = QTextEdit(self.centralwidget)
-        # self.plotLayout.addWidget(self.textEdit)
+        self.plotLayout = QVBoxLayout(self.centralwidget)
+        self.plotLayout.setSpacing(2)
+        self.mainLayout.addLayout(self.plotLayout)
 
         self.terminal = QTerminalWidget()
         self.terminal.setMinimumWidth(550)
         self.leftLayout.addWidget(self.terminal)
-
-        self.plotLayout = QVBoxLayout(self.centralwidget)
-        self.plotLayout.setSpacing(2)
-        self.mainLayout.addLayout(self.plotLayout)
 
         self.triggerButton = QPushButton("Trigger timer", self.centralwidget)
         self.triggerButton.clicked.connect(self.trigger_timer)
@@ -155,7 +151,7 @@ class MainWindow(QMainWindow):
         self.checkbox = QCheckBox("Checkbox", self.centralwidget)
         self.checkbox.stateChanged.connect(self.state_changed)
         self.buttonLayout.addWidget(self.checkbox)
-        
+
         self.sin_enabled_checkbox = QCheckBox("Sine enabled", self.centralwidget, checked=True)
         self.sin_enabled_checkbox.stateChanged.connect(self.sin_enabled_changed)
         self.buttonLayout.addWidget(self.sin_enabled_checkbox)
@@ -365,7 +361,7 @@ class MainWindow(QMainWindow):
         #print(d, end='')
 
     def trigger_timer(self) -> None:
-        self.cd_timer.trigger = True
+        self.cd_timer.trigger()
 
     def state_changed(self, state: int) -> None:
         logging.debug(f"Checkbox state changed: {state}")

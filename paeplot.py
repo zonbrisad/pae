@@ -20,8 +20,8 @@ pen = pg.mkPen(color="#ff00ff", width=1)
 
 
 class PaePlot(pg.PlotWidget):
-    def __init__(self, node: PaeNode, title="", datapoints=1000, intervall: int = 1):
-        super().__init__(background="default")
+    def __init__(self, node: PaeNode, title="", datapoints=1000, intervall: int = 1, parent=None):
+        super().__init__(background="default", parent=parent)
         self.datapoints = datapoints
         self.node = node
         self.intervall = intervall

@@ -16,9 +16,10 @@
 import logging
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
-from pae import PaeNode
+from pae import PaeNode, PaeType
 from PyQt5.QtWidgets import (
     QHBoxLayout,
+    QVBoxLayout,
     QWidget,
     QPushButton,
     QTextEdit,
@@ -31,13 +32,14 @@ pen = pg.mkPen(color="#ff00ff", width=1)
 
 
 class QPaePlot(pg.PlotWidget):
-    def __init__(self, node: PaeNode, datapoints=1000, intervall: int = 1):
-        super().__init__(background="default")
+    def __init__(self, node: PaeNode, datapoints=1000, intervall: int = 1, parent=None):
+        # super().__init__(background="default")
+        super().__init__(background="default", parent=parent)
         self.datapoints = datapoints
         self.node = node
         self.intervall = intervall
         self.tick = 0
-
+        #self.setTitle(node.get_name())
         self.x = list(range(self.datapoints))
         self.y = [0 for _ in range(self.datapoints)]
         self.line = self.plot(self.x, self.y, pen=pen)
@@ -57,48 +59,50 @@ class QPaePlot(pg.PlotWidget):
 
 
 class QPaeNode(QWidget):
+
+    def add_label(self, text: str, width: int = 100) -> QLineEdit:
+        label = QLineEdit(self)
+        label.setText(text)
+        label.setReadOnly(True)
+        label.setFixedWidth(width)
+        self.data_layout.addWidget(label)
+        return label
+
     def __init__(self, node: PaeNode, parent=None):
         super().__init__(parent)
         self.node = node
-        self.layout = QHBoxLayout(self)
-        self.layout.setSpacing(2)
-        self.setLayout(self.layout)
 
-        self.node_enabled = QCheckBox("", self)
+        self.main_layout = QHBoxLayout(self)
+        self.main_layout.setSpacing(1)
+        self.setLayout(self.main_layout)
+
+        self.node_layout = QVBoxLayout()
+        self.main_layout.addLayout(self.node_layout)
+
+        self.data_layout = QHBoxLayout()
+        self.node_layout.addLayout(self.data_layout)
+
+        self.name_label = self.add_label(f"{self.node.get_name()}:", 150)
+        self.id_label = self.add_label(f"{self.node.id}", 120)
+        self.type_label = self.add_label(f"{self.node.type.name}", 140)
+        self.flags_label = self.add_label("", 60)
+        self.value_label = self.add_label("", 100)
+
+        self.control_layout = QHBoxLayout()
+        self.node_layout.addLayout(self.control_layout)
+
+        self.node_enabled = QCheckBox("")
         self.node_enabled.setChecked(self.node.enabled)
         self.node_enabled.stateChanged.connect(self.node_enable_changed)
-        self.layout.addWidget(self.node_enabled)
+        self.control_layout.addWidget(self.node_enabled)
 
-        self.label = QLineEdit(self)
-        self.label.setText(f"{self.node.get_name()}:")
-        self.label.setReadOnly(True)
-        self.label.setFixedWidth(150)
-        self.layout.addWidget(self.label)
+        if self.node.type == PaeType.CountDownTimer:
+            self.reset_button = QPushButton("Reset")
+            self.reset_button.clicked.connect(lambda: self.node.trigger())
+            self.control_layout.addWidget(self.reset_button)
 
-        self.id_label = QLineEdit(self)
-        self.id_label.setText(f"{self.node.id}")
-        self.id_label.setReadOnly(True)
-        self.id_label.setFixedWidth(120)
-        self.layout.addWidget(self.id_label)
-
-        self.type_label = QLineEdit(self)
-        self.type_label.setText(f"{self.node.type.name}")
-        self.type_label.setReadOnly(True)
-        self.type_label.setFixedWidth(140)
-        self.layout.addWidget(self.type_label)
-
-        self.flags_label = QLineEdit(self)
-        self.flags_label.setReadOnly(True)
-        self.flags_label.setFixedWidth(60)
-        self.layout.addWidget(self.flags_label)
-
-        self.value_label = QLineEdit(self)
-        self.value_label.setReadOnly(True)
-        self.value_label.setFixedWidth(100)
-        self.layout.addWidget(self.value_label)
-
-        self.pl = QPaePlot(node=node)
-        self.layout.addWidget(self.pl)
+        self.plot = QPaePlot(node=node)
+        self.main_layout.addWidget(self.plot)
         self.update()
 
     def node_enable_changed(self, state: int) -> None:
@@ -125,7 +129,7 @@ class QPaeNode(QWidget):
             f"{enabled:1} {n_src:2}"
         )
 
-        self.pl.update()
+        self.plot.update()
 
 
 def main() -> None:

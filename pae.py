@@ -173,7 +173,7 @@ class PaeNode(PaeObject):
         self.amplitude = amplitude
         self.average = average
         self.divider = divider
-        self.trigger = trigger
+        self._trigger = trigger
         self.new_value = None
 
         if self.type == PaeType.Average:
@@ -205,8 +205,12 @@ class PaeNode(PaeObject):
         if self.get_source() is None:
             return True
 
-        return self.get_source().is_enabled()  
+        return self.get_source().is_enabled()
 
+    def trigger(self) -> None:
+        if self.type == PaeType.CountDownTimer:
+            self._trigger = True
+            
     def update(self) -> None:
         super().update()
 
@@ -309,9 +313,9 @@ class PaeNode(PaeObject):
             if self.value > 0:
                 self.value -= 1
 
-            if self.trigger is True:
+            if self._trigger is True:
                 self.value = 200
-                self.trigger = False
+                self._trigger = False
 
             self.last = sv
 

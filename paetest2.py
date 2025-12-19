@@ -91,37 +91,10 @@ class MainWindow(QMainWindow):
         # Create central widget
         self.centralwidget = QWidget(self)
         self.setCentralWidget(self.centralwidget)
-        self.mainLayout = QHBoxLayout(self.centralwidget)
-        self.mainLayout.setSpacing(2)
 
-        self.leftLayout = QVBoxLayout(self.centralwidget)
-        self.leftLayout.setSpacing(2)
-        self.mainLayout.addLayout(self.leftLayout)
-
-        self.buttonLayout = QHBoxLayout(self.centralwidget)
-        self.buttonLayout.setSpacing(2)
-        self.buttonLayout.setContentsMargins(2, 2, 2, 2)
-        self.leftLayout.addLayout(self.buttonLayout)
-
-        self.plotLayout = QVBoxLayout(self.centralwidget)
-        self.plotLayout.setSpacing(2)
-        self.mainLayout.addLayout(self.plotLayout)
-
-        self.triggerButton = QPushButton("Trigger timer", self.centralwidget)
-        self.triggerButton.clicked.connect(self.trigger_timer)
-        self.buttonLayout.addWidget(self.triggerButton)
-
-        self.checkbox = QCheckBox("Checkbox", self.centralwidget)
-        self.checkbox.stateChanged.connect(self.state_changed)
-        self.buttonLayout.addWidget(self.checkbox)
-
-        self.slider = QSlider(Qt.Horizontal, self.centralwidget)
-        self.slider.setMinimum(0)
-        self.slider.setMaximum(100)
-        self.slider.valueChanged.connect(self.set_aslider)
-        self.buttonLayout.addWidget(self.slider)
-
-        self.buttonLayout.addStretch()
+        self.main_layout = QVBoxLayout(self.centralwidget)
+        self.main_layout.setSpacing(0)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
 
         # Menubar
         self.menubar = QMenuBar(self)
@@ -297,8 +270,8 @@ class MainWindow(QMainWindow):
 
         self.node_widgets = []
         for nd in self.motor.nodes:
-            nw = QPaeNode(node=nd)
-            self.leftLayout.addWidget(nw)
+            nw = QPaeNode(node=nd, parent=self.centralwidget)
+            self.main_layout.addWidget(nw)
             self.node_widgets.append(nw)
 
         self.timer = QTimer()
@@ -343,7 +316,6 @@ class MainWindow(QMainWindow):
 
 def main() -> None:
     logging_format = "[%(levelname)s] %(lineno)d %(funcName)s() : %(message)s"
-    # logging.basicConfig(format=logging_format, level=logging.DEBUG)
 
     p_parser = argparse.ArgumentParser(add_help=False)
     p_parser.add_argument(
@@ -369,6 +341,10 @@ def main() -> None:
     if hasattr(args, "func"):
         args.func()
         exit(0)
+
+    if args.debug:
+        logging.basicConfig(format=logging_format, level=logging.DEBUG)
+        logging.debug("Debugging enabled")
 
     parser.print_help()
     app = QApplication(sys.argv)
