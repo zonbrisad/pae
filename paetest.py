@@ -124,19 +124,21 @@ class MainWindow(QMainWindow):
         # Create central widget
         self.centralwidget = QWidget(self)
         self.setCentralWidget(self.centralwidget)
+        
+        # Layouts
         self.mainLayout = QHBoxLayout(self.centralwidget)
         self.mainLayout.setSpacing(2)
 
-        self.leftLayout = QVBoxLayout(self.centralwidget)
+        self.leftLayout = QVBoxLayout()
         self.leftLayout.setSpacing(2)
         self.mainLayout.addLayout(self.leftLayout)
 
-        self.buttonLayout = QHBoxLayout(self.centralwidget)
+        self.buttonLayout = QHBoxLayout()
         self.buttonLayout.setSpacing(2)
         self.buttonLayout.setContentsMargins(2, 2, 2, 2)
         self.leftLayout.addLayout(self.buttonLayout)
 
-        self.plotLayout = QVBoxLayout(self.centralwidget)
+        self.plotLayout = QVBoxLayout()
         self.plotLayout.setSpacing(2)
         self.mainLayout.addLayout(self.plotLayout)
 

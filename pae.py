@@ -210,7 +210,7 @@ class PaeNode(PaeObject):
     def trigger(self) -> None:
         if self.type == PaeType.CountDownTimer:
             self._trigger = True
-            
+
     def update(self) -> None:
         super().update()
 

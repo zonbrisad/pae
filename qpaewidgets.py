@@ -14,6 +14,7 @@
 # ----------------------------------------------------------------------------
 
 import logging
+import time
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
 from pae import PaeNode, PaeType
@@ -22,9 +23,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QPushButton,
-    QTextEdit,
     QCheckBox,
-    QSlider,
     QLineEdit,
 )
 
@@ -33,15 +32,17 @@ pen = pg.mkPen(color="#ff00ff", width=1)
 
 class QPaePlot(pg.PlotWidget):
     def __init__(self, node: PaeNode, datapoints=1000, intervall: int = 1, parent=None):
-        # super().__init__(background="default")
-        super().__init__(background="default", parent=parent)
+        super().__init__(background="default",
+                         parent=parent,
+                         axisItems={"bottom": pg.DateAxisItem()})
         self.datapoints = datapoints
         self.node = node
         self.intervall = intervall
         self.tick = 0
-        #self.setTitle(node.get_name())
-        self.x = list(range(self.datapoints))
+        # self.setTitle(node.get_name())
+        self.x = [time.time() - (self.datapoints - i)*self.intervall for i in range(self.datapoints)]
         self.y = [0 for _ in range(self.datapoints)]
+
         self.line = self.plot(self.x, self.y, pen=pen)
 
     def update(self):
@@ -51,9 +52,9 @@ class QPaePlot(pg.PlotWidget):
             self.tick = 0
 
     def update_plot(self, new_val):
-        self.x = self.x[1:]
-        self.x.append(self.x[-1] + 1)
-        self.y = self.y[1:]
+        self.x.pop(0)
+        self.x.append(time.time())
+        self.y.pop(0)
         self.y.append(new_val)
         self.line.setData(self.x, self.y)
 
@@ -87,6 +88,8 @@ class QPaeNode(QWidget):
         self.type_label = self.add_label(f"{self.node.type.name}", 140)
         self.flags_label = self.add_label("", 60)
         self.value_label = self.add_label("", 100)
+        self.data_layout.addStretch()
+        #self.data_layout.setStretchFactor(self.data_layout.itemAt(5), 1)
 
         self.control_layout = QHBoxLayout()
         self.node_layout.addLayout(self.control_layout)
@@ -101,7 +104,9 @@ class QPaeNode(QWidget):
             self.reset_button.clicked.connect(lambda: self.node.trigger())
             self.control_layout.addWidget(self.reset_button)
 
-        self.plot = QPaePlot(node=node)
+        self.control_layout.addStretch()
+
+        self.plot = QPaePlot(node=node, datapoints=500, intervall=0.1)
         self.main_layout.addWidget(self.plot)
         self.update()
 
