@@ -14,11 +14,13 @@
 # ----------------------------------------------------------------------------
 
 import logging
+import sys
 import time
-from PyQt5.QtCore import Qt
-import pyqtgraph as pg
-from pae import PaeNode, PaeType
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import (
+    QApplication,
+    QMainWindow,
     QHBoxLayout,
     QVBoxLayout,
     QWidget,
@@ -26,9 +28,19 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QLineEdit,
 )
+import pyqtgraph as pg
+from pae import PaeNode, PaeType, PaeMotor
 
-pen = pg.mkPen(color="#ff00ff", width=1)
+pen = pg.mkPen(color="#ff00ff", width=0.6)
+pen_default = pg.mkPen(color="#00ff00", width=0.6)
 
+pg_color_red = "#ff0000"
+pg_color_green = "#00ff00"
+pg_color_blue = "#0000ff"
+pg_color_white = "#ffffff"
+pg_color_yellow = "#ffff00"
+pg_color_cyan = "#00ffff"
+pg_color_magenta = "#ff00ff"
 
 class QPaePlot(pg.PlotWidget):
     def __init__(self, node: PaeNode, datapoints=1000, intervall: int = 1, parent=None):
@@ -57,6 +69,39 @@ class QPaePlot(pg.PlotWidget):
         self.y.pop(0)
         self.y.append(new_val)
         self.line.setData(self.x, self.y)
+
+
+class QPaePlots(pg.PlotWidget):
+    def __init__(self, nodes: PaeNode, datapoints=1000, intervall: int = 1, parent=None):
+        super().__init__(background="default",
+                         parent=parent,
+                         axisItems={"bottom": pg.DateAxisItem()})
+        self.datapoints = datapoints
+        self.nodes = []
+        self.intervall = intervall
+        self.tick = 0
+        # self.setTitle(node.get_name())
+        self.x = [time.time() - (self.datapoints - i)*self.intervall for i in range(self.datapoints)]
+
+    def add_node(self, node: PaeNode, color="#00ff00") -> None:   
+        y = [0 for _ in range(self.datapoints)]
+        pen = pg.mkPen(color=color, width=0.6)
+        line = self.plot(self.x, y, pen=pen)
+
+        self.nodes.append((node, y, line))
+
+    def update(self):
+        self.tick += 1
+        self.x.pop(0)
+        self.x.append(time.time())
+        if self.tick >= self.intervall:
+            for (node, y, line) in self.nodes:
+                y.pop(0)
+                y.append(node.value)
+                line.setData(self.x, y)
+
+            self.tick = 0
+
 
 
 class QPaeNode(QWidget):
@@ -137,8 +182,75 @@ class QPaeNode(QWidget):
         self.plot.update()
 
 
+class MainWindow(QMainWindow):
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent)
+
+        self.resize(1200, 200)
+        self.setWindowTitle("QPaeWidgetTest")
+
+        # Create central widget
+        self.centralwidget = QWidget(self)
+        self.setCentralWidget(self.centralwidget)
+
+        self.main_layout = QVBoxLayout(self.centralwidget)
+        self.main_layout.setSpacing(0)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.motor = PaeMotor()
+        sin_node = self.motor.add_node(
+            PaeNode(
+                type=PaeType.Sine,
+                name="Sine",
+                id="sin")
+            )
+        sqr_node = self.motor.add_node(
+            PaeNode(
+                type=PaeType.Square,
+                name="Square",
+                id="sqr",
+                period=12.0
+            )
+        )
+
+        self.motor.initiate()
+
+        self.node_widgets = []
+        for nd in self.motor.nodes:
+            nw = QPaePlot(node=nd, datapoints=500, intervall=0.1)
+            self.main_layout.addWidget(nw)
+            self.node_widgets.append(nw)
+
+        self.multi_plot = QPaePlots(nodes=self.motor.nodes, datapoints=500, intervall=0.1)
+        self.multi_plot.add_node(sin_node, pg_color_cyan)
+        self.multi_plot.add_node(sqr_node, pg_color_red)
+        self.main_layout.addWidget(self.multi_plot)
+
+        self.timer = QTimer()
+        self.timer.setInterval(100)
+        self.timer.timeout.connect(self.timerx)
+        self.timer.start()
+
+    def timerx(self) -> None:
+        self.motor.update()
+        for nw in self.node_widgets:
+            nw.update()
+
+        self.multi_plot.update()
+
+    def exit(self):
+        return super().close()  # Placeholder for any cleanup actions
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self.exit()
+        return super().closeEvent(event)
+
+
 def main() -> None:
-    pass
+    app = QApplication(sys.argv)
+    main_window = MainWindow()
+    main_window.show()
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
