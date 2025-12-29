@@ -21,9 +21,11 @@ from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
+    QDialog,
     QHBoxLayout,
     QVBoxLayout,
     QWidget,
+    QLabel,
     QPushButton,
     QCheckBox,
     QLineEdit,
@@ -103,7 +105,6 @@ class QPaePlots(pg.PlotWidget):
             self.tick = 0
 
 
-
 class QPaeNode(QWidget):
 
     def add_label(self, text: str, width: int = 100) -> QLineEdit:
@@ -120,6 +121,7 @@ class QPaeNode(QWidget):
 
         self.main_layout = QHBoxLayout(self)
         self.main_layout.setSpacing(1)
+        self.main_layout.setContentsMargins(1, 1, 1, 1)
         self.setLayout(self.main_layout)
 
         self.node_layout = QVBoxLayout()
@@ -128,7 +130,7 @@ class QPaeNode(QWidget):
         self.data_layout = QHBoxLayout()
         self.node_layout.addLayout(self.data_layout)
 
-        self.name_label = self.add_label(f"{self.node.get_name()}:", 150)
+        self.name_label = self.add_label(f"{self.node.get_name()}", 150)
         self.id_label = self.add_label(f"{self.node.id}", 120)
         self.type_label = self.add_label(f"{self.node.type.name}", 140)
         self.flags_label = self.add_label("", 60)
@@ -182,6 +184,104 @@ class QPaeNode(QWidget):
         self.plot.update()
 
 
+class QPaeMonitorNode(QWidget):
+
+    def add_label(self, text: str, width: int = 100) -> QLineEdit:
+        label = QLineEdit(self, text=text)
+        label.setReadOnly(True)
+        # label.setFixedWidth(width)
+        label.setMinimumWidth(width)
+        self.main_layout.addWidget(label)
+        return label
+
+    def add_qlabel(self, text: str, width: int = 100) -> QLabel:
+        label = QLabel(f"<b>{text}</b>", self)
+        label.setMinimumWidth(width)
+        self.main_layout.addWidget(label)
+        return label
+
+    def __init__(self, node: PaeNode, parent=None, header: bool = False):
+        super().__init__(parent)
+
+        self.node = node
+        self.main_layout = QHBoxLayout(self)
+        self.main_layout.setSpacing(1)
+        self.main_layout.setContentsMargins(1, 1, 1, 1)
+        self.setLayout(self.main_layout)
+
+        if header is True:
+            self.name_label = self.add_qlabel("Name", 150)
+            self.id_label = self.add_qlabel("ID", 120)
+            self.type_label = self.add_qlabel("Type", 140)
+            self.source_id = self.add_qlabel("Source ID", 120)
+            self.flags_label = self.add_qlabel("Flags", 60)
+            self.value_label = self.add_qlabel("Value", 100)
+            return
+
+        self.name_label = self.add_label(f"{self.node.get_name()}", 150)
+        self.id_label = self.add_label(f"{self.node.id}", 120)
+        self.type_label = self.add_label(f"{self.node.type.name}", 140)
+        if self.node.source is not None:
+            self.source_id = self.add_label(f"{self.node.source.id}", 120)
+        else:
+            self.source_id = self.add_label("", 120)
+        
+        self.flags_label = self.add_label("", 60)
+        self.value_label = self.add_label("", 100)
+
+        self.update()
+
+    def update(self) -> None:
+
+        self.value_label.setText(f"{self.node.value:.3f}")
+        if self.node.is_enabled() is True:
+            enabled = "E"
+        else:
+            enabled = "D"
+
+        if self.node.source_enabled() is False:
+            n_src = "SD"
+        else:
+            n_src = "  "
+
+        self.flags_label.setText(
+            f"{enabled:1} {n_src:2}"
+        )
+
+
+class QPaeMonitor(QDialog):
+    def __init__(self, motor: PaeMotor, parent=None):
+        super().__init__(parent)
+        self.motor = motor
+        self.setWindowTitle("Pae Node Monitor")
+        self.setModal(False)
+        self.setWindowModality(Qt.WindowModal)
+        #self.setWindowModality(Qt.ApplicationModal)
+
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(1, 1, 1, 1)
+        self.main_layout.setSpacing(1)
+        self.setLayout(self.main_layout)
+
+        self.main_layout.addWidget(QPaeMonitorNode(node=None, header=True))
+
+        self.node_widgets = []
+        for nd in self.motor.nodes:
+            nw = QPaeMonitorNode(node=nd)
+            self.main_layout.addWidget(nw)
+            self.node_widgets.append(nw)
+
+    def update(self) -> None:
+        for nw in self.node_widgets:
+            nw.update()
+
+    @staticmethod
+    def monitor(motor: PaeMotor) -> None:
+        monitor = QPaeMonitor(motor)
+        monitor.show()
+        return monitor
+
+
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -212,7 +312,16 @@ class MainWindow(QMainWindow):
                 period=12.0
             )
         )
-
+        sin_sqr_node = self.motor.add_node(
+            PaeNode(
+                type=PaeType.Multiply,
+                name="Sine*Square",
+                id="sin_sqr",
+                source=sin_node,
+                factor="sqr"
+            )
+        )
+            
         self.motor.initiate()
 
         self.node_widgets = []
@@ -226,22 +335,33 @@ class MainWindow(QMainWindow):
         self.multi_plot.add_node(sqr_node, pg_color_red)
         self.main_layout.addWidget(self.multi_plot)
 
+        self.monitor = None
+
         self.timer = QTimer()
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.timerx)
         self.timer.start()
 
     def timerx(self) -> None:
+        if self.monitor is None:
+            # self.monitor = QPaeMonitor(self.motor, self)
+            # self.monitor.show()
+            self.monitor = QPaeMonitor.monitor(self.motor)
+        
         self.motor.update()
         for nw in self.node_widgets:
             nw.update()
 
         self.multi_plot.update()
 
+        if self.monitor is not None:
+            self.monitor.update()
+
     def exit(self):
         return super().close()  # Placeholder for any cleanup actions
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        self.monitor.close()
         self.exit()
         return super().closeEvent(event)
 
